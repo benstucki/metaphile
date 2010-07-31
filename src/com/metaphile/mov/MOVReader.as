@@ -2,15 +2,16 @@ package com.metaphile.mov
 {
 import com.metaphile.IMetaReader;
 import com.metaphile.MetaReaderBase;
-import com.metaphile.logging.ParseLog;
 import com.metaphile.mov.atoms.ISOCode;
 
 import flash.events.EventDispatcher;
 import flash.events.ProgressEvent;
-//import flash.filesystem.FileStream;
 import flash.utils.ByteArray;
 import flash.utils.Dictionary;
 import flash.utils.IDataInput;
+
+import mx.logging.ILogger;
+import mx.logging.Log;
 
 public class MOVReader extends MetaReaderBase implements IMetaReader
 {
@@ -20,6 +21,8 @@ public class MOVReader extends MetaReaderBase implements IMetaReader
 	private var tags:Dictionary = new Dictionary(false);
 
 	private var atomBufferSize:uint = 8;
+	
+	CONFIG::debugging { private var logger:ILogger = Log.getLogger(flash.utils.getQualifiedClassName(this).replace("::", ".")); }
 	
 	public function setIdentifier(stream:IDataInput, filename:String):void
 	{
@@ -31,7 +34,7 @@ public class MOVReader extends MetaReaderBase implements IMetaReader
 		tags[stream] = new ITunesData();
 		tags[stream].nextAtomPosition = atomBufferSize;
 		
-		ParseLog.info(this, "## Start Reading #############################################");
+		CONFIG::debugging { logger.info("## Start Reading #############################################"); }
 		if (stream is EventDispatcher) 
 		{
 			(stream as EventDispatcher).addEventListener(ProgressEvent.PROGRESS, progressHandler);
@@ -49,7 +52,7 @@ public class MOVReader extends MetaReaderBase implements IMetaReader
 
 	private function workStream(stream:IDataInput, bytesLoaded:int, bytesTotal:int):void 
 	{
-		ParseLog.info(this, "## workStream #############################################");
+		CONFIG::debugging { logger.info("## workStream #############################################"); }
 
 		var tag:ITunesData = tags[stream];
 		var metaSize:int = (tag != null) ? tag.size : 0;

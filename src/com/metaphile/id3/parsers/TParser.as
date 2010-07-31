@@ -1,15 +1,20 @@
 package com.metaphile.id3.parsers
 {
-	import com.metaphile.logging.ParseLog;
+	
+	import com.metaphile.id3.ID3Data;
 	import com.metaphile.id3.frames.*;
 	import com.metaphile.id3.utilities.*;
 	
 	import flash.utils.ByteArray;
 	import flash.utils.Dictionary;
-	import com.metaphile.id3.ID3Data;
+	
+	import mx.logging.ILogger;
+	import mx.logging.Log;
 	
 	public class TParser extends FrameParser
 	{
+		
+		CONFIG::debugging { private var logger:ILogger = Log.getLogger(flash.utils.getQualifiedClassName(this).replace("::", ".")); }
 		
 		// holds defined id values for version 1, 2.2, 2.3, and 2.4 respectively.
 		// (null if frame does not exist in version)
@@ -33,17 +38,17 @@ package com.metaphile.id3.parsers
 		
 		private function readTFrame(type:uint, bytes:ByteArray, version:Number):Frame {
 			var size:int = ID3.readInt(bytes, version);
-			ParseLog.parsed(this, "size: {0} (+10)", size, bytes.position);
+			CONFIG::debugging { logger.info("size: {0} (+10)", size, bytes.position); }
 			var frame:TFrame = new TFrame( type );
 			readFlags( frame, bytes, version );
 			if(frame.compression){
 				size = uncompressFrame(size, bytes);
-				ParseLog.info(this, "uncompressed size {0} (+10)", size);
+				CONFIG::debugging { logger.info("uncompressed size {0} (+10)", size); }
 			}
 			frame.encoding = bytes.readUnsignedByte();
-			ParseLog.parsed(this, "encoding: {0}", frame.encoding, bytes.position);
+			CONFIG::debugging { logger.info("encoding: {0}", frame.encoding, bytes.position); }
 			frame.text = ID3.readString(bytes, frame.encoding, size-1);
-			ParseLog.parsed(this, "text: {0}", frame.text, bytes.position);
+			CONFIG::debugging { logger.info("text: {0}", frame.text, bytes.position); }
 			//handler.tag.frames[type] = frame;
 			return frame;
 		}

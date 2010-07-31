@@ -6,10 +6,11 @@ package com.metaphile.id3.parsers
 	import flash.utils.ByteArray;
 	import mx.logging.ILogger;
 	import mx.logging.Log;
-	import com.metaphile.logging.ParseLog;
 	
 	public class TXXXParser extends FrameParser
 	{
+		
+		CONFIG::debugging { private var logger:ILogger = Log.getLogger(flash.utils.getQualifiedClassName(this).replace("::", ".")); }
 		
 		public function TXXXParser( successor:FrameParser = null ) {
 			super(successor);
@@ -24,19 +25,19 @@ package com.metaphile.id3.parsers
 		private function readTXXXFrame( bytes:ByteArray, version:Number ):Frame {
 			var frame:TXXXFrame = new TXXXFrame();
 			var size:uint = ID3.readInt(bytes, version);
-			ParseLog.parsed(this, "size: {0} (+10)", size, bytes.position);
+			CONFIG::debugging { logger.info("size: {0} (+10)", size, bytes.position); }
 			readFlags( frame, bytes, version );
 			if(frame.compression){
 				size = uncompressFrame(size, bytes);
-				ParseLog.parsed(this, "uncompressed size: {0} (+10)", size, bytes.position);
+				CONFIG::debugging { logger.info("uncompressed size: {0} (+10)", size, bytes.position); }
 			}
 			var start:uint = bytes.position;
 			frame.encoding = bytes.readUnsignedByte();
-			ParseLog.parsed(this, "encoding: {0}", frame.encoding, bytes.position);
+			CONFIG::debugging { logger.info("encoding: {0}", frame.encoding, bytes.position); }
 			frame.description = ID3.readString(bytes, frame.encoding);
-			ParseLog.parsed(this, "description: {0}", frame.description, bytes.position);
+			CONFIG::debugging { logger.info("description: {0}", frame.description, bytes.position); }
 			frame.text = ID3.readString(bytes, frame.encoding, size - (bytes.position - start));
-			ParseLog.parsed(this, "text: {0}", frame.text, bytes.position);
+			CONFIG::debugging { logger.info("text: {0}", frame.text, bytes.position); }
 			return frame;
 		}
 		

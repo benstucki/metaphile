@@ -1,13 +1,15 @@
 package com.metaphile.id3
 {
-	import com.metaphile.id3.frames.APICFrame;
 	import com.metaphile.IMetaData;
-	import flash.utils.ByteArray;
+	import com.metaphile.id3.frames.APICFrame;
 	import com.metaphile.id3.frames.Frame;
-	import mx.collections.ArrayCollection;
-	import com.metaphile.id3.frames.TFrame;
 	import com.metaphile.id3.frames.FrameTypes;
+	import com.metaphile.id3.frames.TFrame;
+	
 	import flash.events.EventDispatcher;
+	import flash.utils.ByteArray;
+	
+	import mx.collections.ArrayCollection;
 	
 	/**
 	 * Represents ID3 data, a format found in most MP3 files.
@@ -35,7 +37,7 @@ package com.metaphile.id3
 		private var _extended:Boolean;
 		private var _experimental:Boolean;
 		private var _size:int;
-		private var _albumArt:APICFrame;
+		/*private var _albumArt:APICFrame;
 		private var _albumTitle:TFrame;
 		private var _composers:TFrame;
 		private var _genres:TFrame;
@@ -47,7 +49,7 @@ package com.metaphile.id3
 		private var _track:TFrame;
 		private var _year:TFrame;
 		private var _performer:TFrame;
-		private var _privateFrames:Array;
+		private var _privateFrames:Array;*/
 		
 		
 		//**********************************
@@ -109,7 +111,8 @@ package com.metaphile.id3
 		 * Song Title
 		 */
 		public function get title():String {
-			if(songTitle) { return String(songTitle); }
+			var title:TFrame = getFrame(FrameTypes.TITLE) as TFrame;
+			if(title) { return title.text; }
 			return null;
 		}
 		
@@ -117,9 +120,12 @@ package com.metaphile.id3
 		 * Song description, album title, or group description.
 		 */ 
 		public function get subtitle():String {
-			if(songDescription) { return String(songDescription); }
-			if(albumTitle) { return String(albumTitle); }
-			if(groupDescription) { return String(groupDescription); }
+			var description:TFrame = getFrame(FrameTypes.SUBTITLE) as TFrame;
+			if(description) { return description.text; }
+			var title:TFrame = getFrame(FrameTypes.ALBUM_TITLE) as TFrame;
+			if(title) { return title.text; }
+			var groupDescription:TFrame = getFrame(FrameTypes.CONTENT_GROUP_DESCRIPTION) as TFrame;
+			if(groupDescription) { return groupDescription.text; }
 			return null;
 		}
 		
@@ -127,10 +133,14 @@ package com.metaphile.id3
 		 * Band, performer, or composer homepage.
 		 */
 		public function get url():String { return ""; }
+		
 		public function get author():String {
-			if(band) { return String(band); }
-			if(performer) { return String(performer); }
-			if(composers) { return String(composers); }
+			var band:TFrame = getFrame(FrameTypes.BAND) as TFrame;
+			if(band) { return band.text; }
+			var performer:TFrame = getFrame(FrameTypes.LEAD_PERFORMER) as TFrame;
+			if(performer) { return performer.text; }
+			var composers:TFrame = getFrame(FrameTypes.COMPOSER) as TFrame;
+			if(composers) { return composers.text; }
 			return null;
 		}
 		
@@ -138,7 +148,8 @@ package com.metaphile.id3
 		 * Album art.
 		 */
 		public function get image():ByteArray {
-			if(albumArt) { return albumArt.image; }
+			var frame:APICFrame = getFrame(FrameTypes.ATTACHED_PICTURE) as APICFrame;
+			if(frame) { return frame.image; }
 			return null;
 		}
 		
@@ -146,7 +157,8 @@ package com.metaphile.id3
 		 * Album art description.
 		 */
 		public function get imageDescription():String {
-			if(albumArt) { return albumArt.description; }
+			var frame:APICFrame = getFrame(FrameTypes.ATTACHED_PICTURE) as APICFrame;
+			if(frame) { return frame.description; }
 			return null;
 		}
 		
@@ -155,9 +167,11 @@ package com.metaphile.id3
 		// ID3 Frames
 		//*****************************************
 		
+		public var frames:Array;
+		
 		/**
 		 * A picture directly related to the audio file.
-		 */
+		 *//*
 		public function get albumArt():APICFrame { return _albumArt; }
 		public function set albumArt( value:APICFrame ):void {
 			_albumArt = value;
@@ -165,7 +179,7 @@ package com.metaphile.id3
 		
 		/**
 		 * The title of the recording which the audio in the file is taken from.
-		 */
+		 *//*
 		public function get albumTitle():TFrame { return _albumTitle; }
 		public function set albumTitle( value:TFrame ):void {
 			_albumTitle = value;
@@ -175,7 +189,7 @@ package com.metaphile.id3
 		
 		/**
 		 * The name of the composer(s). They are seperated with the "/" character.
-		 */
+		 *//*
 		public function get composers():TFrame { return _composers; }
 		public function set composers( value:TFrame ):void {
 			_composers = value;
@@ -191,7 +205,7 @@ package com.metaphile.id3
 		
 		/**
 		 * Song genre.
-		 */
+		 *//*
 		public function get genres():TFrame { return _genres; }
 		public function set genres( value:TFrame ):void {
 			_genres = value;
@@ -199,7 +213,7 @@ package com.metaphile.id3
 		
 		/**
 		 * Used if the sound belongs to a larger category of sounds/music. For example, classical music is often sorted in different musical sections (e.g. "Piano Concerto", "Weather - Hurricane").
-		 */
+		 *//*
 		public function get groupDescription():TFrame { return _groupDescription; }
 		public function set groupDescription( value:TFrame ):void {
 			_groupDescription = value;
@@ -207,7 +221,7 @@ package com.metaphile.id3
 		
 		/**
 		 * The actual name of the piece (e.g. "Adagio", "Hurricane Donna").
-		 */
+		 *//*
 		public function get songTitle():TFrame { return _songTitle; }
 		public function set songTitle( value:TFrame ):void {
 			_songTitle = value;
@@ -215,7 +229,7 @@ package com.metaphile.id3
 		
 		/**
 		 * Used for information directly related to the contents title (e.g. "Op. 16" or "Performed live at Wembley").
-		 */
+		 *//*
 		public function get songDescription():TFrame { return _songDescription; }
 		public function set songDescription( value:TFrame ):void {
 			_songDescription = value;
@@ -235,7 +249,7 @@ package com.metaphile.id3
 		
 		/**
 		 * The band, orchestra, or accompaniment in the recording. 
-		 */
+		 *//*
 		public function get band():TFrame { return _band; }
 		public function set band( value:TFrame ):void {
 			_band = value;
@@ -247,7 +261,7 @@ package com.metaphile.id3
 		
 		/**
 		 * The name of the label or publisher.
-		 */
+		 *//*
 		public function get publisher():TFrame { return _publisher; }
 		public function set publisher( value:TFrame ):void {
 			_publisher = value;
@@ -256,7 +270,7 @@ package com.metaphile.id3
 		/**
 		 * A numeric string containing the order number of the audio-file on its original recording.
 		 * This may be extended with a "/" character and a numeric string containing the total numer of tracks/elements on the original recording. E.g. "4/9".
-		 */
+		 *//*
 		public function get track():TFrame { return _track; }
 		public function set track( value:TFrame ):void {
 			_track = value;
@@ -272,7 +286,7 @@ package com.metaphile.id3
 		/**
 		 * A numeric string with a year of the recording.
 		 * This frames is always four characters long (until the year 10000).
-		 */
+		 *//*
 		public function get year():TFrame { return _year; }
 		public function set year( value:TFrame ):void {
 			_year = value;
@@ -292,7 +306,7 @@ package com.metaphile.id3
 		/**
 		 * Used for the main artist(s).
 		 * They are seperated with the "/" character.
-		 */
+		 *//*
 		public function get performer():TFrame { return _performer; }
 		public function set performer(value:TFrame):void {
 			_performer = value;
@@ -300,7 +314,7 @@ package com.metaphile.id3
 		
 		/**
 		 * Frames used to contain information from a software producer that its program uses and does not fit into the other frames.
-		 */
+		 *//*
 		public function get privateFrames():Array { return _privateFrames; }
 		public function set privateFrames( value:Array ):void {
 			_privateFrames = value;
@@ -351,6 +365,16 @@ package com.metaphile.id3
 					_genres = TFrame(frame);
 					break;
 			}
+		}
+		*/
+		
+		private function getFrame(type:uint):Frame {
+			for each(var frame:Frame in frames) {
+				if(frame.type == type) {
+					return frame;
+				}
+			}
+			return null;
 		}
 		
 	}

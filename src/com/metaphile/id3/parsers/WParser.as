@@ -1,15 +1,20 @@
 package com.metaphile.id3.parsers
 {
 	
-	import com.metaphile.id3.frames.*;
 	import com.metaphile.id3.*;
-	import flash.utils.Dictionary;
+	import com.metaphile.id3.frames.*;
 	import com.metaphile.id3.utilities.*;
+	
 	import flash.utils.ByteArray;
-	import com.metaphile.logging.ParseLog;
+	import flash.utils.Dictionary;
+	
+	import mx.logging.ILogger;
+	import mx.logging.Log;
 	
 	public class WParser extends FrameParser
 	{
+		
+		CONFIG::debugging { private var logger:ILogger = Log.getLogger(flash.utils.getQualifiedClassName(this).replace("::", ".")); }
 		
 		// holds defined id values for version 1, 2.2, 2.3, and 2.4 respectively.
 		// (null if frame does not exist in version)
@@ -31,15 +36,15 @@ package com.metaphile.id3.parsers
 		
 		private function readWFrame(type:uint, bytes:ByteArray, version:Number):Frame {
 			var size:int = ID3.readInt(bytes, version);
-			ParseLog.parsed(this, "size: {0} (+10)", size, bytes.position);
+			CONFIG::debugging { logger.info("size: {0} (+10)", size, bytes.position); }
 			var frame:WFrame = new WFrame( type );
 			readFlags(frame, bytes, version);
 			if(frame.compression){
 				size = uncompressFrame(size, bytes);
-				ParseLog.info(this, "uncompressed size {0} (+10)", size);
+				CONFIG::debugging { logger.info("uncompressed size {0} (+10)", size); }
 			}
 			frame.url = ID3.readString(bytes, 0, size);
-			ParseLog.parsed(this, "url: {0}", frame.url, bytes.position);
+			CONFIG::debugging { logger.info("url: {0}", frame.url, bytes.position); }
 			return frame;
 		}
 		

@@ -1,22 +1,24 @@
 package com.metaphile.id3
 {
 	
-	import flash.events.*;
-	import flash.utils.ByteArray;
-	import flash.utils.Endian;
-	//import mx.controls.Image;
 	import com.metaphile.*;
+	import com.metaphile.IMetaData;
+	import com.metaphile.IMetaReader;
 	import com.metaphile.id3.*;
 	import com.metaphile.id3.frames.*;
 	import com.metaphile.id3.parsers.*;
 	import com.metaphile.id3.utilities.*;
-	import flash.utils.Timer;
-	import flash.utils.IDataInput;
-	import com.metaphile.logging.ParseLog;
-	import com.metaphile.IMetaData;
-	import com.metaphile.IMetaReader;
-	//import com.metaphile.MetaEvent;
+	
+	import flash.events.*;
+	import flash.utils.ByteArray;
 	import flash.utils.Dictionary;
+	import flash.utils.Endian;
+	import flash.utils.IDataInput;
+	import flash.utils.Timer;
+	import flash.utils.getQualifiedClassName;
+	
+	import mx.logging.ILogger;
+	import mx.logging.Log;
 	
 	public class ID3Reader extends MetaReaderBase implements IMetaReader {
 		
@@ -30,6 +32,8 @@ package com.metaphile.id3
 		*/
 		private var chain:Array = [FrameParser, PRIVParser, GEOBParser, IPLSParser, PCNTParser, POPMParser, APICParser, COMMParser, WXXXParser, WParser, TXXXParser, TParser];
 		private var parser:FrameParser;
+		
+		CONFIG::debugging { private var logger:ILogger = Log.getLogger(flash.utils.getQualifiedClassName(this).replace("::", ".")); }
 		
 		public function ID3Reader():void {
 			linkChain();
@@ -48,24 +52,24 @@ package com.metaphile.id3
 			//var result:uint = 0;
 			var tag:ID3Data = new ID3Data();
 			if( bytes.bytesAvailable >= 10) {
-				ParseLog.info(this, "## ID3v2 Header #############################################");
+				CONFIG::debugging { logger.info("## ID3v2 Header #############################################"); }
 				if (bytes.readUTFBytes(3)=="ID3") {
-					ParseLog.parsed(this, "id: {0}", "ID3", 3);
+					CONFIG::debugging { logger.info("id: {0}", "ID3", 3); }
 					tag.version = 2; // tag version
 					tag.version += bytes.readByte()/10; // release
 					tag.version += bytes.readByte()/100; // revision
-					ParseLog.parsed(this, "version: {0}", tag.version, 5);
+					CONFIG::debugging { logger.info("version: {0}", tag.version, 5); }
 					//frameIdSize = tag.version < 2.3 ? 3 : 4;
 					var flags:uint = bytes.readUnsignedByte(); // flags byte
-					ParseLog.parsed(this, "read flags: {0}", flags.toString(2), 6);
+					CONFIG::debugging { logger.info("read flags: {0}", flags.toString(2), 6); }
 					tag.unsynchronisation = Boolean(flags>>7);
-					ParseLog.debug(this, "unsyncronization: {0}", tag.unsynchronisation);
+					CONFIG::debugging { logger.info("unsyncronization: {0}", tag.unsynchronisation); }
 					tag.extended = Boolean(flags>>6&01);
-					ParseLog.debug(this, "extended: {0}", tag.extended);
+					CONFIG::debugging { logger.info("extended: {0}", tag.extended); }
 					tag.experimental = Boolean(flags>>5&001);
-					ParseLog.debug(this, "experimental: {0}", tag.experimental);
+					CONFIG::debugging { logger.info("experimental: {0}", tag.experimental); }
 					var tagSize:int = ID3.convertSynchsafe(bytes.readUnsignedInt()); // tag size in byte
-					ParseLog.parsed(this, "size: {0} (+10)", tagSize, 10);
+					CONFIG::debugging { logger.info("size: {0} (+10)", tagSize, 10); }
 					tag.size = tagSize - 10;
 				} else {
 					tag.version = 1;
@@ -78,65 +82,74 @@ package com.metaphile.id3
 		private function parseBody( bytes:ByteArray, tag:ID3Data ):IMetaData {
 			//var result:ID3Data = new ID3Data();
 			//data.readBytes(_bytes,0);
+			var frames:Array = [];
 			if(tag.version > 2){
 				if(tag.unsynchronisation){
 					bytes = ID3.unsynchronize(bytes);
 					tag.size = bytes.length;
-					ParseLog.debug(this, "unsynchronized size: {0}", tag.size);
+					CONFIG::debugging { logger.info("unsynchronized size: {0}", tag.size); }
 				}
 				if(tag.extended && tag.version>=2.3){
-					ParseLog.debug(this, "extended header");
+					CONFIG::debugging { logger.info("extended header"); }
 					var size:int = ID3.convertSynchsafe(bytes.readUnsignedInt());
-					ParseLog.parsed(this, "size: {0}", size, bytes.position);
+					CONFIG::debugging { logger.info("size: {0}", size, bytes.position); }
 					var flags:int = bytes.readByte();
-					ParseLog.parsed(this, "flags {0}", flags.toString(2), bytes.position);
+					CONFIG::debugging { logger.info("flags {0}", flags.toString(2), bytes.position); }
 					flags = bytes.readByte();
-					ParseLog.parsed(this, "flags {0}", flags.toString(2), bytes.position);
+					CONFIG::debugging { logger.info("flags {0}", flags.toString(2), bytes.position); }
 					var paddingsize:int = ID3.convertSynchsafe(bytes.readUnsignedInt());
-					ParseLog.parsed(this, "padding size: {0}", paddingsize, bytes.position);
+					CONFIG::debugging { logger.info("padding size: {0}", paddingsize, bytes.position); }
 				}
 				var frameIdSize:Number = tag.version < 2.3 ? 3 : 4;
 				var id:String = "";
 				while(bytes.position < tag.size - frameIdSize){
-					ParseLog.info(this, "////////////////////////////////////////////////////////////");
+					CONFIG::debugging { logger.info("////////////////////////////////////////////////////////////"); }
 					
 					id = bytes.readUTFBytes(frameIdSize);
 					if( id=="" ) { 
 						validatePadding(bytes);
 						break;
 					}
-					ParseLog.parsed(this, "frame {0}", id, bytes.position);
-					tag.addFrame( parser.readFrame(id, bytes, tag.version) );
+					CONFIG::debugging { logger.info("frame {0}", id, bytes.position); }
+					//tag.addFrame( parser.readFrame(id, bytes, tag.version) );
+					frames.push( parser.readFrame(id, bytes, tag.version) );
 				}
-				ParseLog.info(this, "#############################################################");
+				tag.frames = frames;
+				CONFIG::debugging { logger.info("#############################################################"); }
 			} else {
 				
 				bytes.position = bytes.length - 128;
 				if(bytes.readUTFBytes(3)=="TAG"){
-					ParseLog.info(this, "## ID3v1 ####################################################");
+					CONFIG::debugging { logger.info("## ID3v1 ####################################################"); }
 					var title:TFrame = new TFrame(FrameTypes.TITLE);
 					title.text = bytes.readUTFBytes(30);
-					tag.addFrame(title);
-					ParseLog.parsed(this, "Title: {0)", title.text, bytes.position);
+					//tag.addFrame(title);
+					frames.push(title);
+					CONFIG::debugging { logger.info("Title: {0)", title.text, bytes.position); }
 					var artist:TFrame = new TFrame(FrameTypes.BAND);
 					artist.text = bytes.readUTFBytes(30);
-					tag.addFrame(artist);
-					ParseLog.parsed(this, "Artist: {0}", artist.text, bytes.position);
+					//tag.addFrame(artist);
+					frames.push(artist);
+					CONFIG::debugging { logger.info("Artist: {0}", artist.text, bytes.position); }
 					var album:TFrame = new TFrame(FrameTypes.ALBUM_TITLE);
 					album.text = bytes.readUTFBytes(30);
-					tag.addFrame(album);
-					ParseLog.parsed(this, "Album: {0}", album.text, bytes.position);
+					//tag.addFrame(album);
+					frames.push(album);
+					CONFIG::debugging { logger.info("Album: {0}", album.text, bytes.position); }
 					var year:TFrame = new TFrame(FrameTypes.YEAR);
 					year.text = bytes.readUTFBytes(4);
-					tag.addFrame(year);
-					ParseLog.parsed(this, "Year: {0}", year.text, bytes.position);
+					//tag.addFrame(year);
+					frames.push(year);
+					CONFIG::debugging { logger.info("Year: {0}", year.text, bytes.position); }
 					var comment:TFrame = new TFrame(FrameTypes.COMMENTS);
 					comment.text = bytes.readUTFBytes(30);
-					tag.addFrame(comment);
-					ParseLog.parsed(this, "Comments: {0}", comment.text, bytes.position);
-					ParseLog.info(this, "#############################################################");
+					//tag.addFrame(comment);
+					frames.push(comment);
+					CONFIG::debugging { logger.info("Comments: {0}", comment.text, bytes.position); }
+					tag.frames = frames;
+					CONFIG::debugging { logger.info("#############################################################"); }
 				} else {
-					ParseLog.warn(this, "ID3 Not Found");
+					CONFIG::debugging { logger.warn("ID3 Not Found"); }
 				}
 			}
 			return tag;
@@ -180,7 +193,7 @@ package com.metaphile.id3
 			var start:int = bytes.position;
 			while(bytes.readByte()==0 && bytes.position < l) {}
 			var end:int = bytes.position;
-			ParseLog.parsed(this, "padding", "", bytes.position);
+			CONFIG::debugging { logger.info("padding", "", bytes.position); }
 		}
 		
 		private function linkChain():void {
